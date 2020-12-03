@@ -1,6 +1,6 @@
 # Monitoring network calls in Python using TIG stack
 
-... intro, why not buy solution
+[Intro wise words]
 
 
 ## Example 1: monitor aiohttp request time
@@ -8,7 +8,7 @@
 Code...
 
 
-If we would change 'www.python.org' to 'www.python1.org', will see exceptions:
+If we change 'www.python.org' to 'www.python1.org', exceptions appear in terminal output, and exceptions stats is send to Telegraf:
 
     (network-calls-stats) ➜  network-calls-stats git:(master) ✗ python aiohttp-send-stats-basic.py
     Reported stats: aiohttp_request_exec_time=93, tags={'domain': 'www.mozilla.org'}
@@ -16,7 +16,9 @@ If we would change 'www.python.org' to 'www.python1.org', will see exceptions:
     ['Py response piece: ...Exception occured: Cannot conn... , Moz response piece: ...\n\n\n\n<!doctype html>\n\n<html cla...']
     Reported stats: aiohttp_request_exec_time=76, tags={'domain': 'www.mozilla.org'}
 
+
 [tutorial-images/example-1-network-exceptions-on-dashboard.png]
+
 
 ## Running examples
 
@@ -77,19 +79,39 @@ pip install -r requirements.txt
 
 ### Run example scripts and watch metrics stats
 
-In separate tab, navigate to examples repo directory, and start them:
+Provided previuos steps were performed (python installed, virtualenv created, dependencies pip-installed), it's easy to run example program:
 ```
-python aiohttp-send-stats-basic.py
+python example-1-aiohttp-send-stats-basic.py
 ```
 
-Navigate to grafana dashboard in browser (http://localhost:3000/), create new dashboard and configure panel:
+There should appear output in terminal:
+```
+(network-calls-stats) ➜  network-calls-stats git:(master) ✗ python example-1-aiohttp-send-stats-basic.py
+Reported stats: aiohttp_request_exec_time=66, tags={'domain': 'www.python.org'}
+Reported stats: aiohttp_request_exec_time=101, tags={'domain': 'www.mozilla.org'}
+['Py response piece: ...<!doctype html>\n<!--[if lt IE ... , Moz response piece: ...\n\n\n\n<!doctype html>\n\n<html cla...']
+Reported stats: aiohttp_request_exec_time=34, tags={'domain': 'www.python.org'}
+Reported stats: aiohttp_request_exec_time=65, tags={'domain': 'www.mozilla.org'}
+['Py response piece: ...<!doctype html>\n<!--[if lt IE ... , Moz response piece: ...\n\n\n\n<!doctype html>\n\n<html cla...']
+```
 
-[pic grafana panels configure]
+To view reported request time stats on dashboard, need to setup datasource and panels in Grafana.
+
+Navigate to grafana dashboard in browser (http://localhost:3000/). Add new data source:
+
+[tutorial-images/setup-dashboard-add-new-source.png]
+[tutorial-images/setup-dashboard-add-source-influx.png]
+[tutorial-images/setup-dashboard-configure-source.png]
+
+This data source should be used when configuring panels.
+Create new dashboard and configure panel for Example 1:
+
+[tutorial-images/example-1-request-time-dashboard-config-1.png]
+[tutorial-images/example-1-request-time-dashboard-config-2.png]
 
 Save panel, and real-time network call metrics should appear.
 
 
-
-### Bonus: histogram
+### Bonus: Telegraf histogram of request time
 
 bonus: telegraf histogram ??

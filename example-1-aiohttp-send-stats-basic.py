@@ -1,8 +1,11 @@
-from yarl import URL
 import socket
+import asyncio
+
 from aiohttp import TraceConfig, ClientSession
 from aiohttp.client_exceptions import ClientError
-import asyncio
+
+
+# ----------------------------- Sending stats to Telegraf -----------------------------------
 
 
 STATS_UDP_ADDR = ('localhost', 8094)
@@ -50,6 +53,9 @@ def send_stats(metric_name, metric_value, tags=None):
         print(f'Got error: {e}')
 
 
+# ----------------------------- aiohttp profiling -----------------------------------
+
+
 async def on_request_start(session, trace_config_ctx, params):
     trace_config_ctx.request_start = asyncio.get_event_loop().time()
 
@@ -79,6 +85,9 @@ class Profiler(TraceConfig):
         self.on_request_start.append(on_request_start)
         self.on_request_end.append(on_request_end)
         self.on_request_exception.append(on_request_exception)
+
+
+# ----------------------------- execute async backend requests -----------------------------------
 
 
 async def call_and_consume_response(session, method, url, **request_kwargs):
@@ -118,6 +127,9 @@ def fetch_async_via_loop(*coroutines):
             if not future.done():
                 print(f'Cancelling task {future}')
                 future.cancel()
+
+
+# ----------------------------- main -----------------------------------
 
 
 if __name__ == '__main__':
