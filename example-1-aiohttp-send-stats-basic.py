@@ -157,8 +157,8 @@ async def call_python_and_mozilla():
             get_response_text('https://www.mozilla.org/en-US/')
         )
         return (
-            f'Py response piece: ...{py_response[:30]}... , '
-            f'Moz response piece: ...{moz_response[:30]}...'
+            f'Py response piece: {py_response[:60].strip()}... ,\n'
+            f'Moz response piece: {moz_response[:60].strip()}...'
         )
 
 
@@ -185,5 +185,5 @@ def fetch_async_via_loop(*coroutines):
 if __name__ == '__main__':
     while True:
         result = fetch_async_via_loop(call_python_and_mozilla())
-        print(result)
+        print(result[0])
         fetch_async_via_loop(asyncio.sleep(3))

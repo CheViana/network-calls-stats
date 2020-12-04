@@ -2,9 +2,11 @@
 
 [Intro wise words]
 
+### Tutorial roadmap
+
 ## Example 1: monitor `aiohttp` request time
 
-I'm going to describe in detail code example that does following:
+Let's dive into first code example. Here's what it does:
 - executes two asyncronous HTTP requests
 - hooks into `aiohttp` signals for request execution
 - reports request time and request exceptions to Telegraf
@@ -12,7 +14,7 @@ I'm going to describe in detail code example that does following:
 Here's execution time results on dashboard:
 [tutorial-images/example-1-request-time-results.png]
 
-Full code of Example 1 can be found [here](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
+Full code of Example 1 can be found in [example-1-aiohttp-send-stats-basic.py](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
 
 See chapter 'Running code examples' below on how to run example code and setup monitoring infrastructure.
 
@@ -37,8 +39,8 @@ async def call_python_and_mozilla():
             get_response_text('https://www.mozilla.org/en-US/')
         )
         return (
-            f'Py response piece: ...{py_response[:30]}... , '
-            f'Moz response piece: ...{moz_response[:30]}...'
+            f'Py response piece: {py_response[:60].strip()}... ,\n'
+            f'Moz response piece: {moz_response[:60].strip()}...'
         )
 ```
 
@@ -206,6 +208,20 @@ It could be used as:
 
 In Example 1 `profile` decorator is used to profile total execition time of function `call_python_and_mozilla`.
 
+### Main thing: the `__main__`
+
+When script is launched from command line, `__name__ == '__main__'`. And following loop executes:
+```
+while True:
+    result = fetch_async_via_loop(call_python_and_mozilla())
+    print(result[0])
+    fetch_async_via_loop(asyncio.sleep(3))
+```
+
+This will call `call_python_and_mozilla`, then sleep 3 seconds. Then call again, forever. Until program is stopped.
+
+`fetch_async_via_loop` is a primitive helper function to execute `async` function in syncronous context. I'm not going to talk much about it as this is outside of current topic, and ain't perfect. Read more about Python's [asyncio](https://python.readthedocs.io/en/latest/library/asyncio.html), it deserves that.
+
 ### Need more exceptions
 
 If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_mozilla`, exceptions appear in terminal output, and exception metrics are sent to Telegraf:
@@ -290,12 +306,14 @@ python example-1-aiohttp-send-stats-basic.py
 There should appear output in terminal:
 ```
 (network-calls-stats) ➜  network-calls-stats git:(master) ✗ python example-1-aiohttp-send-stats-basic.py
-Reported stats: aiohttp_request_exec_time=66, tags={'domain': 'www.python.org'}
-Reported stats: aiohttp_request_exec_time=101, tags={'domain': 'www.mozilla.org'}
-['Py response piece: ...<!doctype html>\n<!--[if lt IE ... , Moz response piece: ...\n\n\n\n<!doctype html>\n\n<html cla...']
-Reported stats: aiohttp_request_exec_time=34, tags={'domain': 'www.python.org'}
-Reported stats: aiohttp_request_exec_time=65, tags={'domain': 'www.mozilla.org'}
-['Py response piece: ...<!doctype html>\n<!--[if lt IE ... , Moz response piece: ...\n\n\n\n<!doctype html>\n\n<html cla...']
+Reported stats: aiohttp_request_exec_time=58, tags={'domain': 'www.python.org'}
+Reported stats: aiohttp_request_exec_time=76, tags={'domain': 'www.mozilla.org'}
+Reported stats: call_python_and_mozilla_exec_time=90, tags={}
+Py response piece: <!doctype html>
+<!--[if lt IE 7]>   <html class="no-js ie6 l... ,
+Moz response piece: <!doctype html>
+
+<html class="windows x86 no-js" lang="e...
 ```
 
 To view reported request time stats on dashboard, need to setup datasource and panels in Grafana.
