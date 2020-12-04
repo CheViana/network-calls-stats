@@ -2,6 +2,7 @@ import socket
 import asyncio
 import contextlib
 import time
+import signal
 from functools import wraps
 
 from aiohttp import TraceConfig, ClientSession
@@ -254,39 +255,48 @@ async def get_response_text(url):
 
 @profile
 async def call_python_and_mozilla_using_aiohttp():
-        py_response, moz_response = await asyncio.gather(
-            # change domain to python1 or set tiny timeout to see network errors
-            get_response_text('https://www.python.org/'),
-            get_response_text('https://www.mozilla.org/en-US/')
-        )
-        return (
-            f'Py response piece: {py_response[:60].strip()}... ,\n'
-            f'Moz response piece: {moz_response[:60].strip()}...'
-        )
-
-
-def fetch_async_via_loop(*coroutines):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        print('Setting new event loop')
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    futures = [asyncio.ensure_future(coro) for coro in coroutines]
-    try:
-        return loop.run_until_complete(asyncio.gather(*futures))
-    finally:
-        for future in futures:  # Cancel unfinished tasks
-            if not future.done():
-                print(f'Cancelling task {future}')
-                future.cancel()
+    py_response, moz_response = await asyncio.gather(
+        # change domain to python1 or set tiny timeout to see network errors
+        get_response_text('https://www.python.org/'),
+        get_response_text('https://www.mozilla.org/en-US/')
+    )
+    return (
+        f'Py response piece: {py_response[:60].strip()}... ,\n'
+        f'Moz response piece: {moz_response[:60].strip()}...'
+    )
 
 
 # ----------------------------- main -----------------------------------
+# Adapted from https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
+
+
+async def main_async():
+    while True:
+        result = await call_python_and_mozilla_using_aiohttp()
+        print(result)
+        await asyncio.sleep(3)
+
+
+async def shutdown(signal, loop):
+    # Finalize asyncio loop
+    tasks = [
+        t for t in asyncio.all_tasks() if t is not asyncio.current_task()
+    ]
+    [task.cancel() for task in tasks]
+    print(f'Cancelling {len(tasks)} outstanding tasks')
+    await asyncio.gather(*tasks, return_exceptions=True)
+    loop.stop()
+    print('Stopped loop')
 
 
 if __name__ == '__main__':
-    while True:
-        result = fetch_async_via_loop(call_python_and_mozilla_using_aiohttp())
-        print(result[0])
-        fetch_async_via_loop(asyncio.sleep(3))
+    loop = asyncio.get_event_loop()
+    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+    for s in signals:
+        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s, loop)))
+    try:
+        loop.create_task(main_async())
+        loop.run_forever()
+    finally:
+        loop.close()
+        print('Closed loop')

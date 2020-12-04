@@ -1,4 +1,6 @@
-➜  network-calls-stats git:(master) ✗ ./one-sec.sh
+For Example 1:
+
+➜ ./one-sec.sh
 Python  process-id username    IPv4 0x...03bd  TCP 0.0.0.0:55493->1.2.3.223:https (ESTABLISHED)
 Python  process-id username    IPv4 0x...63bd  TCP 0.0.0.0:55494->4.5.6.34:https (ESTABLISHED)
 Python  process-id username    IPv4 0x...30fd  TCP 0.0.0.0:55542->1.2.3.223:https (ESTABLISHED)
@@ -7,3 +9,16 @@ Python  process-id username    IPv4 0x...b0fd  TCP 0.0.0.0:55598->1.2.3.223:http
 Python  process-id username    IPv4 0x...00fd  TCP 0.0.0.0:55599->4.5.6.34:https (ESTABLISHED)
 Python  process-id username    IPv4 0x...d79d  TCP 0.0.0.0:55601->1.2.3.223:https (ESTABLISHED)
 Python  process-id username    IPv4 0x...e0fd  TCP 0.0.0.0:55602->4.5.6.34:https (ESTABLISHED)
+
+
+For Example 3 or 4:
+
+➜ ./one-sec.sh
+Python  process-id username    IPv4 0x...0a5d  TCP 0.0.0.0:53983->1.2.3.223:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...e3bd  TCP 0.0.0.0:53984->4.5.6.34:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...0a5d  TCP 0.0.0.0:53983->1.2.3.223:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...e3bd  TCP 0.0.0.0:53984->4.5.6.34:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...0a5d  TCP 0.0.0.0:53983->1.2.3.223:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...e3bd  TCP 0.0.0.0:53984->4.5.6.34:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...0a5d  TCP 0.0.0.0:53983->1.2.3.223:https (ESTABLISHED)
+Python  process-id username    IPv4 0x...e3bd  TCP 0.0.0.0:53984->4.5.6.34:https (ESTABLISHED)
