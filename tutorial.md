@@ -239,6 +239,15 @@ Configure separate Grafana panel to see exceptions on dashboard:
 Exception class is sent as tag along with metric value. This gives us ability to plot different lines in panel for exceptions of different classes. To achieve this, pick 'group by - tag(exception_class)' when editing request exceptions query in Grafana panel.
 
 
+
+## Example 4
+
+^CClosed connector
+Cancelling 1 outstanding tasks
+Stopped loop
+Closed loop
+
+
 ## Running code examples
 
 ### Prerequirements: Python
