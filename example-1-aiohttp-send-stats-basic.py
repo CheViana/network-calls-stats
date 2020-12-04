@@ -1,5 +1,8 @@
 import socket
 import asyncio
+import contextlib
+import time
+from functools import wraps
 
 from aiohttp import TraceConfig, ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -53,6 +56,52 @@ def send_stats(metric_name, metric_value, tags=None):
         print(f'Got error: {e}')
 
 
+# ------------------ Profiling context manager and decorator ------------------------
+
+@contextlib.contextmanager
+def profiler(metric_name, **tags):
+    start = time.perf_counter()
+    yield
+    end = time.perf_counter()
+    elapsed_time = int(round((end - start) * 1000))
+    send_stats(metric_name, elapsed_time, tags)
+
+
+def profile(f=None, metric_name=None):
+    """
+    This profile decorator works for async and sync functions,
+    and for class methods. Default metric name will be name of
+    profiled function plus '_exec_time'.
+
+    Usage:
+
+        @profile(metric_name='my_exec_time')
+        def something_that_takes_time(...):
+            ...
+    """
+    def actual_decorator(f):
+        nonlocal metric_name
+        if not metric_name:
+            metric_name = f'{f.__name__}_exec_time'
+
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            with profiler(metric_name):
+                return f(*args, **kwargs)
+
+        @wraps(f)
+        async def decorated_function_async(*args, **kwargs):
+            with profiler(metric_name):
+                return await f(*args, **kwargs)
+
+        if asyncio.iscoroutinefunction(f):
+            return decorated_function_async
+
+        return decorated_function
+
+    return actual_decorator(f) if f else actual_decorator
+
+
 # ----------------------------- aiohttp profiling -----------------------------------
 
 
@@ -90,21 +139,22 @@ class Profiler(TraceConfig):
 # ----------------------------- execute async backend requests -----------------------------------
 
 
-async def call_and_consume_response(session, method, url, **request_kwargs):
+async def get_response_text(url):
     try:
-        async with session.request(method, url, **request_kwargs) as response:
-            response.raise_for_status()
-            return await response.text()
+        async with ClientSession(trace_configs=[Profiler()]) as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                return await response.text()
     except ClientError as e:
         return f'Exception occured: {e}'
 
 
-async def call_some_backends():
-    async with ClientSession(trace_configs=[Profiler()]) as session:
+@profile
+async def call_python_and_mozilla():
         py_response, moz_response = await asyncio.gather(
             # change domain to python1 or set tiny timeout to see network errors
-            call_and_consume_response(session, 'GET', 'https://www.python.org/'),
-            call_and_consume_response(session, 'GET', 'https://www.mozilla.org/en-US/')
+            get_response_text('https://www.python.org/'),
+            get_response_text('https://www.mozilla.org/en-US/')
         )
         return (
             f'Py response piece: ...{py_response[:30]}... , '
@@ -134,6 +184,6 @@ def fetch_async_via_loop(*coroutines):
 
 if __name__ == '__main__':
     while True:
-        result = fetch_async_via_loop(call_some_backends())
+        result = fetch_async_via_loop(call_python_and_mozilla())
         print(result)
         fetch_async_via_loop(asyncio.sleep(3))
