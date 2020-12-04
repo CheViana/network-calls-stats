@@ -3,6 +3,7 @@ from functools import wraps, partial
 import requests
 import socket
 import time
+import asyncio
 
 from requests.exceptions import RequestException
 from yarl import URL
@@ -68,17 +69,6 @@ def profiler(metric_name, **tags):
 
 
 def profile(f=None, metric_name=None):
-    """
-    This profile decorator works for sync functions,
-    and for class methods. Default metric name will be name of
-    profiled function plus '_exec_time'.
-
-    Usage:
-
-        @profile(metric_name='my_exec_time')
-        def something_that_takes_time(...):
-            ...
-    """
     def actual_decorator(f):
         nonlocal metric_name
         if not metric_name:
@@ -88,6 +78,14 @@ def profile(f=None, metric_name=None):
         def decorated_function(*args, **kwargs):
             with profiler(metric_name):
                 return f(*args, **kwargs)
+
+        @wraps(f)
+        async def decorated_function_async(*args, **kwargs):
+            with profiler(metric_name):
+                return await f(*args, **kwargs)
+
+        if asyncio.iscoroutinefunction(f):
+            return decorated_function_async
 
         return decorated_function
 
