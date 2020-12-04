@@ -280,6 +280,7 @@ async def call_python_and_mozilla_using_aiohttp():
             get_response_text('https://www.python.org/'),
             get_response_text('https://www.mozilla.org/en-US/')
         )
+        # raise ValueError()
         return (
             f'Py response piece: {py_response[:60].strip()}... ,\n'
             f'Moz response piece: {moz_response[:60].strip()}...'

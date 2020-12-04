@@ -383,7 +383,11 @@ Although it looks pretty neat, it might not be possible to using async context m
 
 ## Example 4: aiohttp.TCPConnector
 
-In this example, we're going to make use of `aiohttp`'s `TCPConnector` object, which is a wrap around connection pool ([docs](https://docs.aiohttp.org/en/stable/client_reference.html#tcpconnector)). We're going to reuse same connector while creating new `ClientSession` for every call. `aiohttp` docs recommended way to reuse connections is like in Example 3, so better stick to that unless you know what you're doing.
+Great caution is advised with this example.
+It's just a piece of code to have fun with, not to be used in production.
+
+In this example, we're going to make use of `aiohttp`'s `TCPConnector` object, which is a wrap around connection pool ([docs](https://docs.aiohttp.org/en/stable/client_reference.html#tcpconnector)). We're going to reuse same connector while creating new `ClientSession` for every call.
+`aiohttp` docs recommended way to reuse connections is like in Example 3, so better stick to that.
 
 Full source code of Example 4 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-4-aiohttp-reuse-conn.py).
 
@@ -419,8 +423,13 @@ Stopped loop
 Closed loop
 ```
 
-The connector is used in `get_response_text` function, passed as an argument to `ClientSession`, along with `connector_owner=False`.
-Generally, it's not best idea to store `ClientSession` or `TCPConnector` in thread context. Caution is advised.
+The created connector is used in `get_response_text` function, passed as an argument to `ClientSession`, along with `connector_owner=False`.
+Generally, it's not best idea to store `ClientSession` or `TCPConnector` in thread context, because finalization (connection releasing) could not happen, if program terminates unexpectedly. Example 4 handles connection closing when process is killed or shut down. In some other cases connection might not be closed correctly or left hanging. Try to put `raise ValueError()` somewhere in Example 4 `call_python_and_mozilla_using_aiohttp` and see what happens.
+
+Let's check how stats look for Example 4:
+[tutorial-images/example-4-results.png]
+
+Pretty much the same as for Example 3, but *way more dangerous*.
 
 
 ## Running code examples
