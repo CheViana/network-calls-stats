@@ -20,7 +20,7 @@ See chapter 'Running code examples' below on how to run example code and setup m
 
 ### The tale of two HTTP requests
 
-Let's start with function `call_python_and_mozilla` that executes two asyncronous HTTP requests and prints out bits of response content received:
+Let's start with function `call_python_and_mozilla_using_aiohttp` that executes two asyncronous HTTP requests and prints out bits of response content received:
 
 ```
 async def get_response_text(url):
@@ -33,7 +33,7 @@ async def get_response_text(url):
         return f'Exception occured: {e}'
 
 @profile
-async def call_python_and_mozilla():
+async def call_python_and_mozilla_using_aiohttp():
         py_response, moz_response = await asyncio.gather(
             get_response_text('https://www.python.org/'),
             get_response_text('https://www.mozilla.org/en-US/')
@@ -53,7 +53,7 @@ async with ClientSession() as session:
 
 Which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()` which raises exception when response status code is error code or timeout occurs (`aiohttp` [docs on exceptions](https://docs.aiohttp.org/en/stable/client_reference.html#client-exceptions)). Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
-`call_python_and_mozilla` takes care of callings 2 URLs using `asyncio.gather` (if it's all very new to you, suggest to [read about tasks and coroutines more](https://python.readthedocs.io/en/latest/library/asyncio-task.html)). Execution order is following:
+`call_python_and_mozilla_using_aiohttp` takes care of callings 2 URLs using `asyncio.gather` (if it's all very new to you, suggest to [read about tasks and coroutines more](https://python.readthedocs.io/en/latest/library/asyncio-task.html)). Execution order is following:
 
 first request is sent --> second request is sent --> wait for either one of requests to complete --> first response is received --> second response is received
 
@@ -65,11 +65,11 @@ first request is sent --> wait for first request to complete --> first response 
 
 And total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)` hence asyncronous execution takes less time than syncronous. Provided unlimited CPU was made available to Python program in both cases, async and sync.
 
-On panel that shows both requests time from Example 1, and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_exec_time` almost matches the longer-executing request time:
+On panel that shows both requests time from Example 1, and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_using_aiohttp_exec_time` almost matches the longer-executing request time:
 
 [tutorial-images/example-1-requests-and-total-time.png]
 
-`@profile` decorator takes care of reporting total execution time of function `call_python_and_mozilla_exec_time`. Next we're going to look at how execution time of each `aiohttp` request is reported.
+`@profile` decorator takes care of reporting total execution time of function `call_python_and_mozilla_using_aiohttp_exec_time`. Next we're going to look at how execution time of each `aiohttp` request is reported.
 
 
 ### `aiohttp` requests signals
@@ -206,25 +206,25 @@ It could be used as:
             ...
 ```
 
-In Example 1 `profile` decorator is used to profile total execition time of function `call_python_and_mozilla`.
+In Example 1 `profile` decorator is used to profile total execition time of function `call_python_and_mozilla_using_aiohttp`.
 
 ### Main thing: the `__main__`
 
 When script is launched from command line, `__name__ == '__main__'`. And following loop executes:
 ```
 while True:
-    result = fetch_async_via_loop(call_python_and_mozilla())
+    result = fetch_async_via_loop(call_python_and_mozilla_using_aiohttp())
     print(result[0])
     fetch_async_via_loop(asyncio.sleep(3))
 ```
 
-This will call `call_python_and_mozilla`, then sleep 3 seconds. Then call again, forever. Until program is stopped.
+This will call `call_python_and_mozilla_using_aiohttp`, then sleep 3 seconds. Then call again, forever. Until program is stopped.
 
 `fetch_async_via_loop` is a primitive helper function to execute `async` function in syncronous context. I'm not going to talk much about it as this is outside of current topic, and ain't perfect. Read more about Python's [asyncio](https://python.readthedocs.io/en/latest/library/asyncio.html), it deserves that.
 
 ### Need more exceptions
 
-If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_mozilla`, exceptions appear in terminal output, and exception metrics are sent to Telegraf:
+If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_mozilla_using_aiohttp`, exceptions appear in terminal output, and exception metrics are sent to Telegraf:
 
     (network-calls-stats) ➜  network-calls-stats git:(master) ✗ python aiohttp-send-stats-basic.py
     Reported stats: aiohttp_request_exec_time=93, tags={'domain': 'www.mozilla.org'}
@@ -308,7 +308,7 @@ There should appear output in terminal:
 (network-calls-stats) ➜  network-calls-stats git:(master) ✗ python example-1-aiohttp-send-stats-basic.py
 Reported stats: aiohttp_request_exec_time=58, tags={'domain': 'www.python.org'}
 Reported stats: aiohttp_request_exec_time=76, tags={'domain': 'www.mozilla.org'}
-Reported stats: call_python_and_mozilla_exec_time=90, tags={}
+Reported stats: call_python_and_mozilla_using_aiohttp_exec_time=90, tags={}
 Py response piece: <!doctype html>
 <!--[if lt IE 7]>   <html class="no-js ie6 l... ,
 Moz response piece: <!doctype html>

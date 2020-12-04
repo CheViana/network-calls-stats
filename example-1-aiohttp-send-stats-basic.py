@@ -150,7 +150,7 @@ async def get_response_text(url):
 
 
 @profile
-async def call_python_and_mozilla():
+async def call_python_and_mozilla_using_aiohttp():
         py_response, moz_response = await asyncio.gather(
             # change domain to python1 or set tiny timeout to see network errors
             get_response_text('https://www.python.org/'),
@@ -184,6 +184,6 @@ def fetch_async_via_loop(*coroutines):
 
 if __name__ == '__main__':
     while True:
-        result = fetch_async_via_loop(call_python_and_mozilla())
+        result = fetch_async_via_loop(call_python_and_mozilla_using_aiohttp())
         print(result[0])
         fetch_async_via_loop(asyncio.sleep(3))
