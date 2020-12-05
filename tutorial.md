@@ -396,8 +396,48 @@ Full source code of Example 3 is [here](https://github.com/CheViana/network-call
 
 ## Bonus: histogram of request time
 
-[TODO]
+Grafana panel can not only plot line graphs, but also:
+- show last reading of metric
+- show table of metric values
+- show bar plots
+- show heatmaps (histogram over time)
 
+Heatmap (or histogram) is helpful for quickly getting understanding what is distribution of backend response time: it can be the case that most requests complete in under 50msec, but significant share of requests complete in >350msec. Average request time doesn't show this information. In previous examples, we're plotting just the average.
+
+We can easily add heatmat for request execution time measurement:
+[tutorial-images/bonus-configure-heatmap-1.png]
+[tutorial-images/bonus-configure-heatmap-2.png]
+
+Need to add new panel, pick measurement details, and select "Heatmap" in "Visualization" collapsible in the right column.
+Each 10 seconds new set of bricks is appears panel, each brick's color represents how much measurements fall into that value bucket (e.g. 10msec-20msec). Can set fixed bucket size or fix amount of buckets, or let default values do their magic.
+
+In case Telegraf sends all metrics data to InfluxDB, that's a real heatmap. Telegraf is often configured to send only aggregated values to database (min, avg, max) calculated over short period of time (10sec), to reduce metrics reporting traffic. Heatmap based on such aggregated value is not a real heatmap.
+
+It is possible to configure [histogram aggregate](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/histogram) in Telegraf config ([full config with histogram aggregator]()):
+```
+[[aggregators.histogram]]
+  period = "30s"
+  drop_original = false
+  reset = true
+  cumulative = false
+  [[aggregators.histogram.config]]
+    buckets = [1.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 30.0, 40.0]
+    measurement_name = "aiohttp-request-exec-time"
+    fields = ["value"]
+```
+In this case, I set `reset=true` and `cumulative=false`, that will cause buckets values to be calculated anew for each 30 seconds period. Need to set bucket values manually, as well as specify correct `measurement_name`. If `fields` is not specified, histogram buckets are computed for all fields of measurement. Here's how bucket values appear in InfluxDB:
+[tutorial-images/bonus-buckets-in-influxdb.png]
+
+Amount of request execution times that falls in bucket is saved under "value_bucket" field name, "gt" and "le" are bucket range values that appear as tags.
+
+Let's plot these values using "Bar gauge" panel visualization type:
+[tutorial-images/bonus-configure-hist-1.png]
+[tutorial-images/bonus-configure-hist-2.png]
+
+Let's do 2 separate panels, one for python.org stats and one for mozilla.org (add 'where domain = python.org' in query edit).
+
+Now we can at glance compare last 30 sec request execution time distribution for python.org and for mozilla.org:
+[tutorial-images/bonus-compare-hist.png]
 
 ## Running code examples
 
@@ -509,14 +549,14 @@ Pick "Edit" in dropdown next to new panel title.
 Here's how to configure panel for Example 1:
 [tutorial-images/example-1-request-time-dashboard-config-1.png]
 
-Need to pick data source in the left corner above query editing controls, measurement name in query editing controls, and optionally 'group by' - pick a tag. Could also update panel name - in the right column on top.
+Need to pick data source in the left corner of "Query" tab (center of screen), measurement name in query editing controls, and optionally select in 'group by' custom tag to split measurement in multiple plot lines. To update panel name look in the right column on top.
 
-One thing to notice is that panel shows Y axis values by default as 'short' type, but this can be changed in right side column - to use milliseconds:
+To make Y axis values display with "ms", look in the right side column - "Panel" tab, "Axes" collapsible, "Left Y" - select "Time" and "milliseconds":
 [tutorial-images/example-1-request-time-dashboard-config-2.png]
 
-Save panel, and real-time network call metrics should appear (if examples are still running).
-
-More [documentation](https://grafana.com/docs/grafana/latest/panels/add-a-panel/) on  Grafana dashboards.
+Don't forget to save. More [documentation](https://grafana.com/docs/grafana/latest/panels/add-a-panel/) on Grafana dashboards.
 
 
-### Troubleshooting 
+### Troubleshooting Telegraf, InfluxDB, Grafana
+
+I've got some hints on what to check and how to check in [this post](https://dev.to/cheviana/reporting-measurements-from-python-code-in-real-time-4g5#troubleshooting).

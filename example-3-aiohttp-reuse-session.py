@@ -274,7 +274,7 @@ async def main_async():
         while True:
             result = await call_python_and_mozilla_using_aiohttp(session)
             print(result)
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
 
 
 async def shutdown(signal, loop):
