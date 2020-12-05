@@ -95,22 +95,26 @@ def profile(f=None, metric_name=None):
 # ------------------ Requests send requests ------------------------
 
 
-def profile_request(start_time, response, *args, **kwargs):
-    elapsed_time = round((
-        time.perf_counter() - start_time
-    ) * 1000)
-    send_stats(
-        'requests_request_exec_time',
-        elapsed_time,
-        {'domain': URL(response.url).raw_host}
-    )
+# def profile_request(start_time, response, *args, **kwargs):
+#     elapsed_time = round((
+#         time.perf_counter() - start_time
+#     ) * 1000)
+#     send_stats(
+#         'requests_request_exec_time',
+#         elapsed_time,
+#         {'domain': URL(response.url).raw_host}
+#     )
 
 
 def get_response_text(url):
     try:
+        start_time = time.perf_counter()
+        def profile_request(response, *args, **kwargs):
+            elapsed_time = round((time.perf_counter() - start_time) * 1000)
+            send_stats('requests_request_exec_time', elapsed_time, {'domain': URL(response.url).raw_host})
         response = requests.get(
             url,
-            hooks={'response': partial(profile_request, time.perf_counter())}
+            hooks={'response': profile_request}
         )
         response.raise_for_status()
         return response.content.decode()

@@ -1,35 +1,28 @@
 # Monitoring network calls in Python using TIG stack
 
-Web applications are known to perform backend calls. There's big operational and business value in monitoring how much time backend calls take. Let's look at some code examples that capture and report backend call time using popular Python networking libraries.
+Web applications and API endpoints are known to perform backend calls. Often that is all application does: fetches data from couple backends, combines it and produces response. Monitoring how much time fetching data from backend took is essential.
+Let's look at  code examples that use popular Python networking libraries, and are instrumented to report HTTP request execution time.
 
-### What I'm going to explore in this blogpost
+### What I'm going to explore in this post
 
-I'm going to compare how request timings look for fetching HTML pages using `requests` library and for asyncronously fetching same HTML pages using `aiohttp` library, and attempt to visualize the differences in timings.
+I'm going to compare how request timings look for fetching HTML pages using `requests` library and for asyncronously fetching same HTML pages using `aiohttp` library, to visualize the difference in timings, and to introduce tools that can be used for such monitoring.
 
-To monitor request timings we will use Telegraf, InfluxDB and Grafana stack. These tools are very easy to setup locally, and could be used in production environment.
+To monitor request timings we will use [Telegraf](https://www.influxdata.com/time-series-platform/telegraf/), [InfluxDB](https://www.influxdata.com/products/influxdb/) and [Grafana](https://grafana.com/grafana) stack. These tools are very easy to setup locally, open source, free for personal usage, and could be used in production environment.
 
-See chapter 'Running code examples' below on how to run example code and setup monitoring infrastructure.
-Code for all examples available in [repo](https://github.com/CheViana/network-calls-stats/).
+Chapter 'Running code examples' describes in detail how to run example code and setup monitoring infrastructure (Telegraf, InfluxDB, Grafana).
 
-### What I'm not going to explore in this blogpost
-
-To be fair, `requests` library also provides ways for simultaneous requests execution, in form of `requsts-threads`, but I'm not going look at that tool in this post, or at other numerous ways to achieve non-blocking I/O in Python.
-
-I'm not aiming to cover which networking library is best for production use, or which ready-made monitoring solution is best for production use.
-
-There are multiple tools that provide production-ready web application performance monitoring: backend call time, database query execution time, cache hits, etc. Those are often paid-for, easy to use and don't pollute business code with metrics reporting. Those also might not support your networking library, or generally be not a good fit, like when backend IP changes and the tool uses IPs to distinguish between backends. I suggest to look into ready-made solutions and use your best judgement on what to use.
-
+All code from this writing is available in [repo](https://github.com/CheViana/network-calls-stats/).
 
 ## Example 0: monitor `requests` request time
 
-Let's dive into first code example. Here's what it does:
+Let's dive into first Python code example. Here's what it does:
 - in forever loop, executes two HTTP requests using `requests` Python library
 - reports request time and request exceptions to Telegraf
 
-Here's execution time results on dashboard:
+Here's request execution time plotted on dashboard:
 [tutorial-images/example-0-request-time-results.png]
 
-Full code of example 0 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-0-requests-send-stats.py).
+Full code of Example 0 can be found in [example-0-requests-send-stats.py](https://github.com/CheViana/network-calls-stats/blob/master/example-0-requests-send-stats.py).
 
 High-level execution flow can be followed from `main` part of program:
 ```
@@ -68,9 +61,13 @@ def profile_request(start_time, response, *args, **kwargs):
 
 def get_response_text(url):
     try:
+        request_complete_callback = partial(
+            profile_request,
+            time.perf_counter()
+        )
         response = requests.get(
             url,
-            hooks={'response': partial(profile_request, time.perf_counter())}
+            hooks={'response': request_complete_callback}
         )
         response.raise_for_status()
         return response.content.decode()
@@ -88,24 +85,41 @@ This code uses `requests` library ([docs](https://requests.readthedocs.io/en/mas
 response = requests.get(url).content.decode()
 ```
 
-`requests.get` accepts optional `hooks` argument, where we specified function to be called after request is completed. 
-`partial(profile_request, time.perf_counter())` is itself a function. It's same function as `profile_request` but first argument is already filled in - `time.perf_counter()` passed as `start_time`. Read more about [partial functions in Python](https://docs.python.org/3/library/functools.html#functools.partial).
-`time.perf_counter()` is used to measure execution time in Python, [more about it](https://docs.python.org/3/library/time.html#time.perf_counter).
-`profile_request` function computes elapsed time based on `start_time` provided and current time. `elapsed_time` is in milliseconds, `time.perf_counter()` return microseconds. 
-`send_stats` function is used to report measurement to Telegraf: metric name is `'requests_request_exec_time'`, metric value is time request execution took, tags include additional useful information (domain of URL).
-`get_response_text` also invokes `send_stats` when exception occurs, passing different metric name this time - `'requests_request_exception'`.
+`requests.get` accepts optional `hooks` argument, where function to be called after request is completed is specified - `request_complete_callback`. 
+
+This callback function may look funny if you're not familiar with functional programming. `partial(profile_request, time.perf_counter())` is itself a function. It's same function as `profile_request` but first argument is already filled in - `time.perf_counter()` passed as `start_time` argument. This trick is used to supply correct `start_time` for each request, as `request_complete_callback` function is constructed anew for each request, while code for sending request execution time is isolated in another function `profile_request`. We can rewrite that as follows:
+
+```
+def get_response_text(url):
+    try:
+        start_time = time.perf_counter()
+        def profile_request(response, *args, **kwargs):
+            elapsed_time = round((time.perf_counter() - start_time) * 1000)
+            send_stats('requests_request_exec_time', elapsed_time, ...)
+        response = requests.get(url, hooks={'response': profile_request})
+```
+
+And it's going to work alright. Now there's a function defined inside a function, and `get_response_text` is bloated with profiling stuff, which is not something I like.
+
+ Read more about [partial functions](https://en.wikipedia.org/wiki/Partial_application) and [Python functools](https://docs.python.org/3/library/functools.html).
+
+`time.perf_counter()` is used to measure execution time in Python, [docs](https://docs.python.org/3/library/time.html#time.perf_counter). `time.perf_counter()` returns microseconds. 
+
+
 
 ### Sending stats
 
-`profile_request` function, as well as `profile` decorator, send stats to Telegraf using function `send_stats`.
+`send_stats` function is used to report measurement to Telegraf: metric name is `'requests_request_exec_time'`, metric value is time request execution took, tags include additional useful information (domain of URL).
+`get_response_text` also invokes `send_stats` when exception occurs, passing different metric name this time - `'requests_request_exception'`.
+
 I have [another post](https://dev.to/cheviana/reporting-measurements-from-python-code-in-real-time-4g5) that describes ways to send stats from Python program to Telegraf.
 
-In short, `send_stats` accepts metric name, metric value and tags dictionary. Those are converted to one string, and sent to socket on which Telegraf listens for measurement data. Telegraf sends received metrics to database (InfluxDB). Grafana dashboards query database to put a dot on graph for each request execution time reported.
+In short, `send_stats` accepts metric name, metric value and tags dictionary. Those are converted to one string, and sent to socket on which Telegraf listens for measurement data. Telegraf sends received metrics to database (InfluxDB). Grafana dashboard queries database to put a dot on graph for each metric value reported.
 
 
 ### `profile` decorator
 
-A piece of code which is decorator suitable for any function (async, sync, method of class or pure function) is adapted here to profile function that is decorated. 
+A piece of code which is decorator suitable for any function (async, sync, method of class or pure function) is adapted here to measure execution time of function that is decorated. 
 `profile` decorator is used to profile total execition time of functions `call_python_and_mozilla_using_requests` and `call_python_and_mozilla_using_aiohttp` (following examples).
 Don't confuse with another useful tool - [line_profiler](https://github.com/rkern/line_profiler) - that also provides `profile` decorator.
 
@@ -113,7 +127,7 @@ Don't confuse with another useful tool - [line_profiler](https://github.com/rker
 
 Let's run this example and setup all the monitoring tools (See chapter 'Running code examples' below on how to run example code and setup monitoring infrastructure).
 
-We can configure a panel that shows time request execution took:
+We can configure a panel that shows request execution time:
 [tutorial-images/example-0-results-and-config.png]
 
 Blue dots of total execution time roughly correspond to sum of time request to `python.org` and request to `mozilla.org` took (green and yellow dots), and measures at approximately 150 msec on average.
@@ -129,14 +143,14 @@ If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_
 Configure separate Grafana panel to see exceptions on dashboard:
 [tutorial-images/example-0-1-exceptions-dashboard-and-config.png]
 
-Exception class is sent as tag along with metric value. This gives us ability to plot different lines in panel for exceptions of different classes. To achieve this, pick 'group by - tag(exception_class)' when editing request exceptions query in Grafana panel.
+Exception class is sent as tag along with metric value. This gives us ability to plot different lines for exceptions of different classes. To achieve this, pick 'group by - tag(exception_class)' when editing request exceptions panel.
 
 
 ### Example 0 improved: reuse connection
 
 Code of example 0 can be improved to reuse same connection for calls performed in that forever running `while` loop - here's [improved version](https://github.com/CheViana/network-calls-stats/blob/master/example-0-plus-requests-reuse-conn.py).
 
-Main difference from original example 0:
+Difference from original example 0:
 ```
 ...
 session = requests.Session()
@@ -164,9 +178,11 @@ Here's execution time results on dashboard:
 
 Full code of Example 1 can be found in [example-1-aiohttp-send-stats-basic.py](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
 
+High-level execution flow is similar to the Example 0, the way content is fetched from URLs differs.
+
 ### The tale of two HTTP requests
 
-Let's start with function `call_python_and_mozilla_using_aiohttp` that executes two asyncronous HTTP requests and prints out bits of response content received (much like `call_python_and_mozilla_using_requests` from Example 0):
+Let's start with function `call_python_and_mozilla_using_aiohttp` that executes two asyncronous HTTP requests and returns pieces of response content (the twin of `call_python_and_mozilla_using_requests` from Example 0):
 
 ```
 async def get_response_text(url):
@@ -190,33 +206,34 @@ async def call_python_and_mozilla_using_aiohttp():
         )
 ```
 
-This code uses `aiohttp` library ([docs](https://docs.aiohttp.org/en/stable/client.html)). Basic usage to get text content from URL is following:
+Here `aiohttp` library's `ClientSession` is used to execute request ([docs](https://docs.aiohttp.org/en/stable/client.html)). Basic usage to get text content from URL is following:
 ```
 async with ClientSession() as session:
     async with session.get(url) as response:
         return await response.text()
 ```
 
-Which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()` which raises exception when response status code is error code or timeout occurs (`aiohttp` [docs on exceptions](https://docs.aiohttp.org/en/stable/client_reference.html#client-exceptions)). Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
+Which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()` which raises exception when response status code is error code or timeout occurs . Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
-`call_python_and_mozilla_using_aiohttp` takes care of callings 2 URLs using `asyncio.gather` (if it's all very new to you, suggest to [read about tasks and coroutines more](https://python.readthedocs.io/en/latest/library/asyncio-task.html)). Execution order is following:
+`call_python_and_mozilla_using_aiohttp` takes care of callings 2 URLs using `asyncio.gather` (if it's all very new to you, suggest to [read about tasks and coroutines in Python](https://python.readthedocs.io/en/latest/library/asyncio-task.html)). Execution order is following:
 
-first request is sent --> second request is sent --> wait for either one of requests to complete --> first response is received --> second response is received
+Request to python.org is sent --> Request to mozilla.org is sent --> wait for either one of requests to complete --> first response is received --> second response is received
+
+`asyncio.gather` returns result after both requests are complete.
 
 Total execution time is approximately the time of the longest request out of these two. You're probably aware that this is called non-blocking IO: IO operation frees execution thread, until it needs it again, instead of blocking.
 
-Traditional, not asyncronous, blocking IO, has following execution order:
+Traditional (like in Example 0), not asyncronous, blocking IO, has following execution order:
 
-first request is sent --> wait for first request to complete --> first response is received --> second request is sent --> wait for second request to complete --> second response is received
+Request to python.org is sent --> wait for it to complete --> python.org response is received --> mozilla.org request is sent --> wait for it to complete --> mozilla.org response is received
 
-And total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)` hence asyncronous execution takes less time than syncronous. Provided unlimited CPU was made available to Python program in both cases, async and sync.
-
-Same `profile` decorator is used to measure total execution time of both requests.
+Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`, hence asyncronous execution takes less time than syncronous. Provided unlimited CPU was made available to Python program in both cases, async and sync.
 
 On panel that shows requests execition time and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_using_aiohttp_exec_time` almost matches the longer-executing request time:
 [tutorial-images/example-1-requests-and-total-time.png]
 
 Total execution time for both requests is 75-100 msec.
+
 Next we're going to look at how execution time of each `aiohttp` request is reported.
 
 
@@ -224,7 +241,7 @@ Next we're going to look at how execution time of each `aiohttp` request is repo
 
 `aiohttp` provides a way to execute custom function when HTTP request execution progresses through lifecycle stages: before request is sent, when connection is established, after response chunk is received, etc.
 
-For that, special object-tracer is passed to `aiohttp.ClientSession` - `trace_configs`:
+For that object-tracer is passed to `aiohttp.ClientSession` - `trace_configs`:
 ```
 class Profiler(TraceConfig):
     def __init__(self, *args, **kwargs):
@@ -261,15 +278,17 @@ async def on_request_exception(session, trace_config_ctx, params):
     )
 ```
 
-Notice how timestamp of request start is computed:
+Notice how timestamp is computed:
 ```
 asyncio.get_event_loop().time()
 ```
-It is recommended to use event loop’s internal monotonic clock to compute timedeltas in asyncronous code, rather than `time.now()` or `time.perf_counter()`.
+It is recommended to use event loop’s internal monotonic clock to compute timedeltas in asyncronous code.
 
-Function-hooks have arguments `session, trace_config_ctx, params`. 
-`session` is instance of `aiohttp.ClientSession`. 
-`trace_config_ctx` is context that is passed through all these callbacks, and custom values call be added to it when request is made:
+Function-hooks have arguments `session, trace_config_ctx, params`. Let's look at what they are.
+
+`session` is instance of `aiohttp.ClientSession`.
+
+`trace_config_ctx` is context that is passed through callbacks. Custom values call be added to it when request is made:
 ```
 await session.get(url, trace_request_ctx={'flag': 'red'})
 ...
@@ -278,13 +297,9 @@ async def on_request_end(session, trace_config_ctx, params):
     if trace_config_ctx.trace_request_ctx['flag'] == 'red':
         ....
 ```
+This way function-hook can be programmed to behave differently for different request calls or to report additional data.
 
-`on_request_start` sets request start time on `trace_config_ctx`:
-```
-trace_config_ctx.request_start = asyncio.get_event_loop().time()
-```
-
-`on_request_end` uses `trace_config_ctx.request_start` value to compute total time request took.
+Request end hook uses `trace_config_ctx.request_start` value to compute total time request took. `trace_config_ctx.request_start` is set in request start hook.
 
 `params` argument in `on_request_end` is `aiohttp.TraceRequestEndParams` and as such has `url` property. `url` property is of `yarl.URL` type. `params.url.raw_host` returns domain of URL which was requested. Domain is sent as tag for metric, and this makes it possible to plot separate lines for request execution time for requests to different domains.
 
@@ -300,7 +315,7 @@ async def main_async():
         await asyncio.sleep(3)
 ```
 
-This will call `call_python_and_mozilla_using_aiohttp`, then sleep 3 seconds. Then call again, forever. Until program is stopped.
+This will call `call_python_and_mozilla_using_aiohttp`, then sleep 3 seconds. Then call again, forever. Until program is stopped. Similar to Example 0.
 
 To call async function in sync execution context special tooling is used, which is adapted from [another publication](https://www.roguelynn.com/words/asyncio-graceful-shutdowns/). I'm not going to dive into Python's asyncronous ways in this post. Read more about Python's [asyncio](https://python.readthedocs.io/en/latest/library/asyncio.html), it's pretty cool.
 
@@ -308,14 +323,14 @@ To call async function in sync execution context special tooling is used, which 
 ### Compare results for Example 0 and 1
 
 [tutorial-images/example-0-1-compare-results.pngs.png]
-Connection is not reused for both cases here. Execution time for async version is lower.
+Connection is not reused for both cases here. Execution time for async version is lower, as expected.
 
 
 ## Example 2: more, more stats
 
 `aiohttp` provides hooks to measure more than just request execution time and request exceptions.
 
-We aslo can report stats for:
+It's possible to report stats for:
 - DNS resolution time
 - DNS cache hit/miss
 - waiting for available connection time
@@ -325,10 +340,9 @@ We aslo can report stats for:
 - response content chunk received
 - request chunk sent
 
-Documentation on tracing in `aiohttp` is [here](https://docs.aiohttp.org/en/stable/tracing_reference.html).
-Impressive, isn't it?
+Impressive, isn't it? Documentation on tracing in `aiohttp` is [here](https://docs.aiohttp.org/en/stable/tracing_reference.html).
 
-Let's add more listeners - to all of those hooks:
+Let's add more request lifecycle hooks:
 
 ```
 class Profiler(TraceConfig):
@@ -350,7 +364,7 @@ class Profiler(TraceConfig):
         self.on_dns_cache_miss.append(on_dns_cache_miss)
 ```
 
-I won't bore you with code for each function like `on_dns_resolvehost_end`. Full code of Example 2 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-2-aiohttp-send-more-stats.py).
+I won't bore you with code for each function like `on_dns_resolvehost_end`, it's quite similar to `on_request_end`. Full code of Example 2 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-2-aiohttp-send-more-stats.py).
 
 Reported stats on dashboard for example 2:
 [tutorial-images/example-2-results.png]
@@ -379,74 +393,44 @@ Total execution time is below 50 msec. Cool.
 
 Full source code of Example 3 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-3-aiohttp-reuse-session.py).
 
-Although it looks pretty neat, it might not be possible to using async context manager outside the loop in real-life applications. That's why let's try example 4.
 
-## Example 4: aiohttp.TCPConnector
+## Bonus: histogram of request time
 
-Great caution is advised with this example.
-It's just a piece of code to have fun with, not to be used in production.
-
-In this example, we're going to make use of `aiohttp`'s `TCPConnector` object, which is a wrap around connection pool ([docs](https://docs.aiohttp.org/en/stable/client_reference.html#tcpconnector)). We're going to reuse same connector while creating new `ClientSession` for every call.
-`aiohttp` docs recommended way to reuse connections is like in Example 3, so better stick to that.
-
-Full source code of Example 4 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-4-aiohttp-reuse-conn.py).
-
-Here's how main entry point of program looks in Example 4:
-```
-async def main_async():
-    await create_connector()
-    while True:
-        result = await call_python_and_mozilla_using_aiohttp()
-        print(result)
-        await asyncio.sleep(3)
-
-
-async def shutdown(signal, loop):
-    # Close asiohttp connector
-    await close_connector()
-    ...
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-    for s in signals:
-        loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s, loop)))
-    ...
-
-```
-
-This code creates connector before `while` loop happens. When program is shut down, `shutdown` is called, which closes connector. Program prints to terminal on shutdown:
-```
-^CClosed connector
-Cancelling 1 outstanding tasks
-Stopped loop
-Closed loop
-```
-
-The created connector is used in `get_response_text` function, passed as an argument to `ClientSession`, along with `connector_owner=False`.
-Generally, it's not best idea to store `ClientSession` or `TCPConnector` in thread context, because finalization (connection releasing) could not happen, if program terminates unexpectedly. Example 4 handles connection closing when process is killed or shut down. In some other cases connection might not be closed correctly or left hanging. Try to put `raise ValueError()` somewhere in Example 4 `call_python_and_mozilla_using_aiohttp` and see what happens.
-
-Let's check how stats look for Example 4:
-[tutorial-images/example-4-results.png]
-
-Pretty much the same as for Example 3, but *way more dangerous*.
+[TODO]
 
 
 ## Running code examples
 
-### Prerequirements: Python
+### Prerequirements: Python3
 
-Install Python3: https://docs.python-guide.org/starting/install3/ .
+Install Python3: https://docs.python-guide.org/starting/install3/.
+
 Make sure when you run
 ```
 python --version
 ```
+
 It prints out 'python3.' (could be 'python3.9', or 'python3.7', etc).
 
 ### Prerequirements: Install and launch Telegraf, InfluxDB, Grafana
 
-Visit https://portal.influxdata.com/downloads/ for information on how to install InfluxDB and Telegraf.
-Visit https://grafana.com/grafana/download for information on how to install Grafana.
+To install all tools for MacOS:
+
+    > brew install influxdb  <-- Database for metrics
+    > brew install telegraf  <-- agent-collector of metrics
+    > brew install graphana  <-- UI for metrics exploration and plotting
+
+To download all tools binaries for Linux:
+
+    > wget https://dl.influxdata.com/influxdb/releases/influxdb-1.8.2_linux_amd64.tar.gz
+    > tar xvfz influxdb-1.8.2_linux_amd64.tar.gz
+    > wget https://dl.influxdata.com/telegraf/releases/telegraf-1.15.2_linux_amd64.tar.gz
+    > tar xf telegraf-1.15.2_linux_amd64.tar.gz
+    > wget https://dl.grafana.com/oss/release/grafana-7.1.4.linux-amd64.tar.gz
+    > tar -zxvf grafana-7.1.4.linux-amd64.tar.gz
+
+Visit https://portal.influxdata.com/downloads/ for more information on how to install InfluxDB and Telegraf.
+Visit https://grafana.com/grafana/download for more information on how to install Grafana.
 
 Run Telegraf, InfluxDB, Grafana (each in it's own shell tab):
 ```
@@ -484,7 +468,7 @@ virtualenv venv
 source venv/bin/activate
 ```
 
-Install libraries needed to run examples:
+Install libraries needed to run example code from repo:
 ```
 pip install -r requirements.txt
 ```
@@ -523,8 +507,9 @@ Let's create new dashboard for network stats, and add a panel to it.
 Go to "Dashboards" in left side thin menu (icon looks like 4 bricks), pick "Manage", click on "New dashboard". Click "New panel" or "Add panel" in top right corner.
 Pick "Edit" in dropdown next to new panel title.
 Here's how to configure panel for Example 1:
-
 [tutorial-images/example-1-request-time-dashboard-config-1.png]
+
+Need to pick data source in the left corner above query editing controls, measurement name in query editing controls, and optionally 'group by' - pick a tag. Could also update panel name - in the right column on top.
 
 One thing to notice is that panel shows Y axis values by default as 'short' type, but this can be changed in right side column - to use milliseconds:
 [tutorial-images/example-1-request-time-dashboard-config-2.png]
@@ -533,6 +518,5 @@ Save panel, and real-time network call metrics should appear (if examples are st
 
 More [documentation](https://grafana.com/docs/grafana/latest/panels/add-a-panel/) on  Grafana dashboards.
 
-## Bonus: Telegraf histogram of request time
 
-bonus: telegraf histogram ??
+### Troubleshooting 
