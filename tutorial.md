@@ -413,7 +413,7 @@ Each 10 seconds new set of bricks is appears panel, each brick's color represent
 
 In case Telegraf sends all metrics data to InfluxDB, that's a real heatmap. Telegraf is often configured to send only aggregated values to database (min, avg, max) calculated over short period of time (10sec), to reduce metrics reporting traffic. Heatmap based on such aggregated value is not a real heatmap.
 
-It is possible to configure [histogram aggregate](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/histogram) in Telegraf config ([full config with histogram aggregator]()):
+It is possible to configure [histogram aggregate](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/histogram) in Telegraf config ([full config with histogram aggregator](https://github.com/CheViana/network-calls-stats/blob/master/telegraf-histogram.conf)):
 ```
 [[aggregators.histogram]]
   period = "30s"
