@@ -1,11 +1,16 @@
 # Monitoring network calls in Python using TIG stack
 
-Web applications and API endpoints are known to perform backend calls. Often that is all application does: fetches data from couple backends, combines it and produces response. Monitoring how much time fetching data from backend took is essential.
-Let's look at  code examples that use popular Python networking libraries, and are instrumented to report HTTP request execution time.
+Web applications and API endpoints are known to perform backend calls. Often that is all application does: fetches data from couple backends, combines it and produces response.
+
+Monitoring how much time fetching data from backend took is essential. There are plenty production-ready buy-and-snap-on solutions that provide such monitoring, but they might be not good fit for some cases. And I think it's fun to dig deeper into things to get more understanding of how it all works.
+
+Let's look at code examples that use popular Python networking libraries, and are instrumented to report HTTP request execution time.
 
 ### What I'm going to explore in this post
 
-I'm going to compare how request timings look for fetching HTML pages using `requests` library and for asyncronously fetching same HTML pages using `aiohttp` library, to visualize the difference in timings, and to introduce tools that can be used for such monitoring.
+I'm going to compare how request timings look for fetching HTML pages using `requests` library and for asyncronously fetching same HTML pages using `aiohttp` library. I aim to visualize the difference in timings, and to introduce tools that can be used for such monitoring. 
+
+To be fair, `requests` library has [plugins](https://github.com/spyoungtech/grequests) that enable asyncronous IO, and there's so many other ways to achieve this in Python... I picked `aiohttp` as it provides neat request timing tracing opportunities, and I use this library a lot in the wild.
 
 To monitor request timings we will use [Telegraf](https://www.influxdata.com/time-series-platform/telegraf/), [InfluxDB](https://www.influxdata.com/products/influxdb/) and [Grafana](https://grafana.com/grafana) stack. These tools are very easy to setup locally, open source, free for personal usage, and could be used in production environment.
 
@@ -527,7 +532,7 @@ Install libraries needed to run example code from repo:
 pip install -r requirements.txt
 ```
 
-### Run example scripts
+### Run example Python scripts
 
 Provided previuos steps were performed (python installed, virtualenv created, dependencies pip-installed), it's easy to run example program:
 ```
@@ -547,7 +552,7 @@ Moz response piece: <!doctype html>
 <html class="windows x86 no-js" lang="e...
 ```
 
-### Measurements appear on dashboard
+### Get measurements appearing on dashboard
 
 To view reported request time stats on dashboard, need to setup datasource and panels in Grafana.
 
