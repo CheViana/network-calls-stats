@@ -20,7 +20,7 @@ Let's dive into first Python code example. Here's what it does:
 - reports request time and request exceptions to Telegraf
 
 Here's request execution time plotted on dashboard:
-[tutorial-images/example-0-request-time-results.png]
+![Request execution time plot](tutorial-images/example-0-request-time-results.png)
 
 Full code of Example 0 can be found in [example-0-requests-send-stats.py](https://github.com/CheViana/network-calls-stats/blob/master/example-0-requests-send-stats.py).
 
@@ -128,7 +128,7 @@ Don't confuse with another useful tool - [line_profiler](https://github.com/rker
 Let's run this example and setup all the monitoring tools (See chapter 'Running code examples' below on how to run example code and setup monitoring infrastructure).
 
 We can configure a panel that shows request execution time:
-[tutorial-images/example-0-results-and-config.png]
+![Request execution time configure panel](tutorial-images/example-0-results-and-config.png)
 
 Blue dots of total execution time roughly correspond to sum of time request to `python.org` and request to `mozilla.org` took (green and yellow dots), and measures at approximately 150 msec on average.
 
@@ -141,16 +141,16 @@ If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_
 ```
 
 Configure separate Grafana panel to see exceptions on dashboard:
-[tutorial-images/example-0-1-exceptions-dashboard-and-config.png]
+![Configure exceptions panel](tutorial-images/example-0-1-exceptions-dashboard-and-config.png)
 
 Exception class is sent as tag along with metric value. This gives us ability to plot different lines for exceptions of different classes. To achieve this, pick 'group by - tag(exception_class)' when editing request exceptions panel.
 
 
 ### Example 0 improved: reuse connection
 
-Code of example 0 can be improved to reuse same connection for calls performed in that forever running `while` loop - here's [improved version](https://github.com/CheViana/network-calls-stats/blob/master/example-0-plus-requests-reuse-conn.py).
+Code of example 0 can be improved to reuse same connection for all calls performed in that forever running `while` loop - here's [improved version](https://github.com/CheViana/network-calls-stats/blob/master/example-0-plus-requests-reuse-conn.py).
 
-Difference from original example 0:
+Signifact code change is this one:
 ```
 ...
 session = requests.Session()
@@ -158,10 +158,10 @@ while True:
     result = call_python_and_mozilla_using_requests(session)
 ...
 ```
-This moves connection creation out of `while` loop, now connection is established once and for all.
+Connection creation is moved out of `while` loop, now connection is established once and for all.
 
 Let's compare how much time request execution takes when connection is reused:
-[tutorial-images/example-0-plus-session-reuse-results.png]
+![Compare timing when connection is reused and not, for requests lib](tutorial-images/example-0-plus-session-reuse-results.png)
 
 On the left are dots-measurements for original version of Example 0, on the right - for improved version. Can definitely notice how total execution time get lower, below 100 msec on average. 
 
@@ -170,11 +170,11 @@ On the left are dots-measurements for original version of Example 0, on the righ
 
 Let's dive into next code example. Here's what it does:
 - in forever loop, executes two asyncronous HTTP requests using `aiohttp`
-- hooks into `aiohttp` signals for request execution
+- hooks into `aiohttp` request lifecycle signals
 - reports request time and request exceptions to Telegraf
 
 Here's execution time results on dashboard:
-[tutorial-images/example-1-request-time-results.png]
+![Async requests execution time](tutorial-images/example-1-request-time-results.png)
 
 Full code of Example 1 can be found in [example-1-aiohttp-send-stats-basic.py](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
 
@@ -215,22 +215,22 @@ async with ClientSession() as session:
 
 Which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()` which raises exception when response status code is error code or timeout occurs . Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
-`call_python_and_mozilla_using_aiohttp` takes care of callings 2 URLs using `asyncio.gather` (if it's all very new to you, suggest to [read about tasks and coroutines in Python](https://python.readthedocs.io/en/latest/library/asyncio-task.html)). Execution order is following:
+`call_python_and_mozilla_using_aiohttp` takes care of callings two URLs using `asyncio.gather`. Execution order is following:
 
 Request to python.org is sent --> Request to mozilla.org is sent --> wait for either one of requests to complete --> first response is received --> second response is received
 
-`asyncio.gather` returns result after both requests are complete.
+`await asyncio.gather` returns result after both requests are complete.
 
 Total execution time is approximately the time of the longest request out of these two. You're probably aware that this is called non-blocking IO: IO operation frees execution thread, until it needs it again, instead of blocking.
 
-Traditional (like in Example 0), not asyncronous, blocking IO, has following execution order:
+Traditional (like in Example 0), syncronous, blocking IO, has following execution order:
 
 Request to python.org is sent --> wait for it to complete --> python.org response is received --> mozilla.org request is sent --> wait for it to complete --> mozilla.org response is received
 
 Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`, hence asyncronous execution takes less time than syncronous. Provided unlimited CPU was made available to Python program in both cases, async and sync.
 
 On panel that shows requests execition time and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_using_aiohttp_exec_time` almost matches the longer-executing request time:
-[tutorial-images/example-1-requests-and-total-time.png]
+![Async requests execution time and total time of both requests](tutorial-images/example-1-requests-and-total-time.png)
 
 Total execution time for both requests is 75-100 msec.
 
@@ -301,7 +301,7 @@ This way function-hook can be programmed to behave differently for different req
 
 Request end hook uses `trace_config_ctx.request_start` value to compute total time request took. `trace_config_ctx.request_start` is set in request start hook.
 
-`params` argument in `on_request_end` is `aiohttp.TraceRequestEndParams` and as such has `url` property. `url` property is of `yarl.URL` type. `params.url.raw_host` returns domain of URL which was requested. Domain is sent as tag for metric, and this makes it possible to plot separate lines for request execution time for requests to different domains.
+`params` argument in `on_request_end` is `aiohttp.TraceRequestEndParams` and as such has `url` property. `url` property is of `yarl.URL` type. `params.url.raw_host` returns domain of URL which was requested. Domain is sent as tag for metric, and this makes it possible to plot separate lines for different URLs.
 
 
 ### Main thing
@@ -322,7 +322,7 @@ To call async function in sync execution context special tooling is used, which 
 
 ### Compare results for Example 0 and 1
 
-[tutorial-images/example-0-1-compare-results.pngs.png]
+![Compare example 0 and 1](tutorial-images/example-0-1-compare-results.png)
 Connection is not reused for both cases here. Execution time for async version is lower, as expected.
 
 
@@ -367,7 +367,7 @@ class Profiler(TraceConfig):
 I won't bore you with code for each function like `on_dns_resolvehost_end`, it's quite similar to `on_request_end`. Full code of Example 2 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-2-aiohttp-send-more-stats.py).
 
 Reported stats on dashboard for example 2:
-[tutorial-images/example-2-results.png]
+![aiohttp reporting more stats](tutorial-images/example-2-results.png)
 
 We can see that DNS resolution takes couple of milliseconds and happens for every call, and connection establishing takes 30-40 msec and happens for every call. Also, that DNS cache is not hit, DNS is resolved for every call.
 
@@ -386,7 +386,7 @@ async def main_async():
 ```
 
 And check out how stats look now:
-[tutorial-images/example-3-results.png]
+![aiohttp reuse session timings](tutorial-images/example-3-results.png)
 
 There's only one dot for connection establishing, and one per DNS resoltion per domain. There's plenty of dots for connection reuse event.
 Total execution time is below 50 msec. Cool.
@@ -394,7 +394,19 @@ Total execution time is below 50 msec. Cool.
 Full source code of Example 3 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-3-aiohttp-reuse-session.py).
 
 
+## Compare sync and async URL fetch, with and without reusing connection
+
+Total time for both requests (very approximate):
+
+|  | Connection not reused | Connection reused |
+| --- | --- | --- |
+| Sync | 150 msec | 80 msec |
+| Async | 80 msec | 40 msec |
+
+
 ## Bonus: histogram of request time
+
+![Histogram and heatmap](tutorial-images/bonus-hist-and-heatmap.png)
 
 Grafana panel can not only plot line graphs, but also:
 - show last reading of metric
@@ -402,42 +414,43 @@ Grafana panel can not only plot line graphs, but also:
 - show bar plots
 - show heatmaps (histogram over time)
 
-Heatmap (or histogram) is helpful for quickly getting understanding what is distribution of backend response time: it can be the case that most requests complete in under 50msec, but significant share of requests complete in >350msec. Average request time doesn't show this information. In previous examples, we're plotting just the average.
+Heatmap is helpful for quickly getting understanding what is distribution of backend response time: it can be the case that most requests complete in under 50 msec, but some requests are slow and complete in >500 msec. Average request time doesn't show this information. In previous examples, we're plotting just the average.
 
-We can easily add heatmat for request execution time measurement:
-[tutorial-images/bonus-configure-heatmap-1.png]
-[tutorial-images/bonus-configure-heatmap-2.png]
+We can easily add heatmat for request execution time:
+![Create heatmap](tutorial-images/bonus-configure-heatmap-1.png)
+![Set Y axis to msec](tutorial-images/bonus-configure-heatmap-2.png)
 
 Need to add new panel, pick measurement details, and select "Heatmap" in "Visualization" collapsible in the right column.
 Each 10 seconds new set of bricks is appears panel, each brick's color represents how much measurements fall into that value bucket (e.g. 10msec-20msec). Can set fixed bucket size or fix amount of buckets, or let default values do their magic.
 
 In case Telegraf sends all metrics data to InfluxDB, that's a real heatmap. Telegraf is often configured to send only aggregated values to database (min, avg, max) calculated over short period of time (10sec), to reduce metrics reporting traffic. Heatmap based on such aggregated value is not a real heatmap.
 
-It is possible to configure [histogram aggregate](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/histogram) in Telegraf config ([full config with histogram aggregator](https://github.com/CheViana/network-calls-stats/blob/master/telegraf-histogram.conf)):
+It is possible to configure [histogram aggregate](https://github.com/influxdata/telegraf/tree/master/plugins/aggregators/histogram) in Telegraf config ([full Telegraf config with histogram aggregator](https://github.com/CheViana/network-calls-stats/blob/master/telegraf-histogram.conf)):
 ```
 [[aggregators.histogram]]
   period = "30s"
   drop_original = false
   reset = true
   cumulative = false
+
   [[aggregators.histogram.config]]
     buckets = [1.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 30.0, 40.0]
     measurement_name = "aiohttp-request-exec-time"
     fields = ["value"]
 ```
-In this case, I set `reset=true` and `cumulative=false`, that will cause buckets values to be calculated anew for each 30 seconds period. Need to set bucket values manually, as well as specify correct `measurement_name`. If `fields` is not specified, histogram buckets are computed for all fields of measurement. Here's how bucket values appear in InfluxDB:
-[tutorial-images/bonus-buckets-in-influxdb.png]
+I set `reset=true` and `cumulative=false` which will cause buckets values to be calculated anew for each 30 second period. Need to set value ranges (`buckets`) manually, as well as specify correct `measurement_name`. If `fields` is not specified, histogram buckets are computed for all fields of measurement. Here's how bucket values appear in InfluxDB:
+![InfluxDB raw data for buckets](tutorial-images/bonus-buckets-in-influxdb.png)
 
 Amount of request execution times that falls in bucket is saved under "value_bucket" field name, "gt" and "le" are bucket range values that appear as tags.
 
 Let's plot these values using "Bar gauge" panel visualization type:
-[tutorial-images/bonus-configure-hist-1.png]
-[tutorial-images/bonus-configure-hist-2.png]
+![Configure histogram](tutorial-images/bonus-configure-hist-1.png)
+![Configure histogram: calculate last](tutorial-images/bonus-configure-hist-2.png)
 
-Let's do 2 separate panels, one for python.org stats and one for mozilla.org (add 'where domain = python.org' in query edit).
+Let's create 2 separate panels, one for python.org stats and one for mozilla.org (add 'where domain = python.org' in query edit).
 
 Now we can at glance compare last 30 sec request execution time distribution for python.org and for mozilla.org:
-[tutorial-images/bonus-compare-hist.png]
+![Compare python.org and mozilla.org histogram](tutorial-images/bonus-compare-hist.png)
 
 ## Running code examples
 
@@ -473,10 +486,6 @@ Visit https://portal.influxdata.com/downloads/ for more information on how to in
 Visit https://grafana.com/grafana/download for more information on how to install Grafana.
 
 Run Telegraf, InfluxDB, Grafana (each in it's own shell tab):
-```
-telegraf -config telegraf.conf
-```
-Config file telegraf.conf is provided in [examples repo](https://github.com/CheViana/network-calls-stats/blob/master/telegraf.conf).
 
 ```
 influxd -config /usr/local/etc/influxdb.conf
@@ -487,11 +496,16 @@ cd grafana-7.1.0/
 bin/grafana-server
 ```
 
-To see results on dashboard need to keep Telegraf, InfluxDB, Grafana running while running Python scripts.
+```
+telegraf -config telegraf.conf
+```
+File telegraf.conf can be found in [here](https://github.com/CheViana/network-calls-stats/blob/master/telegraf.conf).
+
+To see results on dashboard need to keep Telegraf, InfluxDB, Grafana running while Python scripts are running.
 
 ### Examples repository
 
-Checkout [repository](https://github.com/CheViana/network-calls-stats/) with code examples and Telegraf config.
+Checkout [repository](https://github.com/CheViana/network-calls-stats/) with code examples and Telegraf configuration files.
 
 ### Python dependencies
 
@@ -513,7 +527,7 @@ Install libraries needed to run example code from repo:
 pip install -r requirements.txt
 ```
 
-### Run example scripts and watch metrics stats
+### Run example scripts
 
 Provided previuos steps were performed (python installed, virtualenv created, dependencies pip-installed), it's easy to run example program:
 ```
@@ -533,13 +547,15 @@ Moz response piece: <!doctype html>
 <html class="windows x86 no-js" lang="e...
 ```
 
+### Measurements appear on dashboard
+
 To view reported request time stats on dashboard, need to setup datasource and panels in Grafana.
 
 Navigate to grafana dashboard in browser (http://localhost:3000/). Add new data source:
 
-[tutorial-images/setup-dashboard-add-new-source.png]
-[tutorial-images/setup-dashboard-add-source-influx.png]
-[tutorial-images/setup-dashboard-configure-source.png]
+![Grafana add datasource](tutorial-images/setup-dashboard-add-new-source.png)
+![Grafana datasource Influx](tutorial-images/setup-dashboard-add-source-influx.png)
+![Grafana configure datasource](tutorial-images/setup-dashboard-configure-source.png)
 
 This data source should be used when configuring panels.
 
@@ -547,12 +563,12 @@ Let's create new dashboard for network stats, and add a panel to it.
 Go to "Dashboards" in left side thin menu (icon looks like 4 bricks), pick "Manage", click on "New dashboard". Click "New panel" or "Add panel" in top right corner.
 Pick "Edit" in dropdown next to new panel title.
 Here's how to configure panel for Example 1:
-[tutorial-images/example-1-request-time-dashboard-config-1.png]
+![Configure Grafana panel](tutorial-images/example-1-request-time-dashboard-config-1.png)
 
-Need to pick data source in the left corner of "Query" tab (center of screen), measurement name in query editing controls, and optionally select in 'group by' custom tag to split measurement in multiple plot lines. To update panel name look in the right column on top.
+Need to pick data source in the left corner of "Query" tab (center of screen) and provide measurement name in query editing section. To update panel name look in the right column on top.
 
 To make Y axis values display with "ms", look in the right side column - "Panel" tab, "Axes" collapsible, "Left Y" - select "Time" and "milliseconds":
-[tutorial-images/example-1-request-time-dashboard-config-2.png]
+![Configure Grafana panel Y axis](tutorial-images/example-1-request-time-dashboard-config-2.png)
 
 Don't forget to save. More [documentation](https://grafana.com/docs/grafana/latest/panels/add-a-panel/) on Grafana dashboards.
 
@@ -560,3 +576,5 @@ Don't forget to save. More [documentation](https://grafana.com/docs/grafana/late
 ### Troubleshooting Telegraf, InfluxDB, Grafana
 
 I've got some hints on what to check and how to check in [this post](https://dev.to/cheviana/reporting-measurements-from-python-code-in-real-time-4g5#troubleshooting).
+
+[Full Grafana dashboard JSON](https://github.com/CheViana/network-calls-stats/blob/master/grafana-model.json) can be used to compare panel settings.
