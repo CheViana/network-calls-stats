@@ -239,7 +239,7 @@ async with ClientSession() as session:
 which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()`, which raises exception when response status code is error code or timeout occurs . Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
 `call_python_and_mozilla_using_aiohttp` takes care of callings two URLs using `asyncio.gather`. Execution order for `call_python_and_mozilla_using_aiohttp` is on the right:
-![Async and sync flow](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/sync-async2.png)
+![Async and sync flow](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/sync-async.png)
 
 `await asyncio.gather` returns the result after both of these requests are complete. Total execution time is approximately the time of the longest request out of these two. You're probably aware that this is called non-blocking IO. Instead of blocking, this kind of IO operation frees execution thread until it needs it again.
 
