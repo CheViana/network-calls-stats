@@ -20,21 +20,24 @@ All code from this writing is available in [repo](https://github.com/CheViana/ne
 
 ### Table of Contents
 
-* Example 0: monitor `requests` request time
-  * Sending stats
-  * `profile` decorator
-  * Results on dashboard
-  * Need more exceptions
-* Example 0 improved: reuse connection
-* Example 1: monitor `aiohttp` request time
-  * The tale of two HTTP requests
-  * `aiohttp` requests signals
-  * Calling asyncronous code from synchronous
-  * Compare results for Example 0 and 1
-* Example 2: more, more stats
-* Example 3: `aiohttp` reuse session
-* Compare sync and async URL fetch avg time, with and without reusing connection
-* Histogram of request time
+- [Monitoring network calls in Python using TIG stack](#monitoring-network-calls-in-python-using-tig-stack)
+    - [What I'm going to explore in this post](#what-im-going-to-explore-in-this-post)
+    - [Table of Contents](#table-of-contents)
+  - [Example 0: monitor `requests` request time](#example-0-monitor-requests-request-time)
+    - [Sending stats](#sending-stats)
+    - [`profile` decorator](#profile-decorator)
+    - [`requests` execution time on dashboard](#requests-execution-time-on-dashboard)
+    - [Need more exceptions](#need-more-exceptions)
+  - [Example 0 improved: reuse connection](#example-0-improved-reuse-connection)
+  - [Example 1: monitor `aiohttp` request time](#example-1-monitor-aiohttp-request-time)
+    - [The tale of two HTTP requests](#the-tale-of-two-http-requests)
+    - [`aiohttp` requests signals](#aiohttp-requests-signals)
+    - [Calling asyncronous code from synchronous](#calling-asyncronous-code-from-synchronous)
+    - [Compare results for Example 0 and 1](#compare-results-for-example-0-and-1)
+  - [Example 2: more, more stats](#example-2-more-more-stats)
+  - [Example 3: `aiohttp` reuse session](#example-3-aiohttp-reuse-session)
+  - [Compare sync and async URL fetch, with and without reusing connection](#compare-sync-and-async-url-fetch-with-and-without-reusing-connection)
+  - [Histogram of request time](#histogram-of-request-time)
 
 ## Example 0: monitor `requests` request time
 
@@ -146,7 +149,7 @@ A piece of code which is a decorator suitable for any function (async, sync, met
 `profile` decorator is used to profile total execition time of functions `call_python_and_mozilla_using_requests` and `call_python_and_mozilla_using_aiohttp` (see the following examples).
 Don't confuse with another useful tool - [line_profiler](https://github.com/rkern/line_profiler) - that also provides `profile` decorator.
 
-### Results on dashboard
+### `requests` execution time on dashboard
 
 Let's run this example and set up all the monitoring tools. See [Running code examples](https://github.com/CheViana/network-calls-stats/blob/master/readme.md)  on how to run example code and set up monitoring infrastructure.
 
