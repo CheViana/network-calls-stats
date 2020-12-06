@@ -239,11 +239,7 @@ async with ClientSession() as session:
 which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()`, which raises exception when response status code is error code or timeout occurs . Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
 `call_python_and_mozilla_using_aiohttp` takes care of callings two URLs using `asyncio.gather`. Execution order is following:
-
-```mermaid
-graph TD;
-    ID-1[Request to python.org is sent] --> ID-2[Request to mozilla.org is sent] --> ID-3[wait for either one of requests to complete] --> ID-4[first response is received] --> ID-5[second response is received];
-```
+![Async flow](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/async-flow.png)
 
 `await asyncio.gather` returns the result after both of these requests are complete.
 
@@ -251,11 +247,7 @@ Total execution time is approximately the time of the longest request out of the
 
 Synchronous, blocking IO, like in Example 0, has following execution order:
 
-```mermaid
-graph TD;
-
-  ID-1[Request to python.org is sent] --> ID-2[wait for it to complete] --> ID-3[python.org response is received] --> ID-4[mozilla.org request is sent] --> ID-5[wait for it to complete] --> ID-6[mozilla.org response is received];
-```
+![Sync flow](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/sync-flow.png)
 
 Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`. Hence, asyncronous execution takes less time than syncronous one, provided unlimited CPU was available in both cases.
 
