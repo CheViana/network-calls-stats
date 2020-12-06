@@ -199,9 +199,6 @@ Let's dive into the next code example. Here's what it does:
 - hooks into `aiohttp` request lifecycle signals
 - reports request time and request exceptions to Telegraf
 
-Here are execution time results on dashboard:
-![Async requests execution time](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-1-request-time-results.png)
-
 Full code of Example 1 can be found in [example-1-aiohttp-send-stats-basic.py](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
 
 High-level execution flow is similar to the Example 0, the way content is fetched from URLs differs.
