@@ -238,14 +238,12 @@ async with ClientSession() as session:
 
 which is basically what happens in `get_response_text`. `get_response_text` also calls `response.raise_for_status()`, which raises exception when response status code is error code or timeout occurs . Exception is silenced in `get_response_text`, so `get_response_text` always returns `str`, either with response content or with exception message.
 
-`call_python_and_mozilla_using_aiohttp` takes care of callings two URLs using `asyncio.gather`. Execution order is following:
+`call_python_and_mozilla_using_aiohttp` takes care of callings two URLs using `asyncio.gather`. Execution order for `call_python_and_mozilla_using_aiohttp` is on the right:
 ![Async and sync flow](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/sync-async.png)
 
-`await asyncio.gather` returns the result after both of these requests are complete.
+`await asyncio.gather` returns the result after both of these requests are complete. Total execution time is approximately the time of the longest request out of these two. You're probably aware that this is called non-blocking IO. Instead of blocking, this kind of IO operation frees execution thread until it needs it again.
 
-Total execution time is approximately the time of the longest request out of these two. You're probably aware that this is called non-blocking IO. Nnstead of blocking, this kind of IO operation frees execution thread until it needs it again.
-
-Synchronous, blocking IO, like in Example 0, has different following execution order (see chart above). Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`. Hence, asyncronous execution takes less time than syncronous one, provided unlimited CPU was available in both cases.
+Synchronous, blocking IO, like in Example 0, has different following execution order (see chart above, on the left). Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`. Hence, asyncronous execution takes less time than syncronous one, provided unlimited CPU was available in both cases.
 
 On the panel that shows requests execition time and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_using_aiohttp_exec_time` almost matches the longer-executing request time:
 ![Async requests execution time and total time of both requests](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-1-requests-and-total-time.png)
