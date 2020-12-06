@@ -46,7 +46,7 @@ Let's dive into first Python code example. Here's what it does:
 - reports request time and request exceptions to Telegraf
 
 Here's request execution time plotted on the dashboard:
-![Request execution time plot](tutorial-images/example-0-request-time-results.png)
+![Request execution time plot](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-0-request-time-results.png)
 
 Full code of Example 0 can be found in [example-0-requests-send-stats.py](https://github.com/CheViana/network-calls-stats/blob/master/example-0-requests-send-stats.py).
 
@@ -154,7 +154,7 @@ Don't confuse with another useful tool - [line_profiler](https://github.com/rker
 Let's run this example and set up all the monitoring tools. See [Running code examples](https://github.com/CheViana/network-calls-stats/blob/master/readme.md)  on how to run example code and set up monitoring infrastructure.
 
 We can configure a panel that shows request execution time:
-![Request execution time configure panel](tutorial-images/example-0-results-and-config.png)
+![Request execution time configure panel](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-0-results-and-config.png)
 
 Blue dots of total execution time roughly correspond to the sum of time request to `python.org` and request to `mozilla.org` took (green and yellow dots). They measure at approximately 150 msec on average.
 
@@ -167,7 +167,7 @@ If we change 'www.python.org' to 'www.python1.org' in function `call_python_and_
 ```
 
 Configure a separate Grafana panel to see exceptions on the dashboard:
-![Configure exceptions panel](tutorial-images/example-0-1-exceptions-dashboard-and-config.png)
+![Configure exceptions panel](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-0-1-exceptions-dashboard-and-config.png)
 
 Exception class is sent as tag along with metric value. This gives us the ability to plot different lines for exceptions of different classes. To achieve this, pick 'group by - tag(exception_class)' when editing request exceptions panel.
 
@@ -187,7 +187,7 @@ while True:
 Connection creation is moved out of the `while` loop. Now, the connection is established once and for all.
 
 Let's compare how much time request execution takes when a connection is reused:
-![Compare timing when connection is reused and not, for requests lib](tutorial-images/example-0-plus-session-reuse-results.png)
+![Compare timing when connection is reused and not, for requests lib](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-0-plus-session-reuse-results.png)
 
 The dots on the left are measurements for for original version of Example 0, and ones on the right came from the improved version. We can definitely notice how total execution time get lower, below 100 msec on average. 
 
@@ -200,7 +200,7 @@ Let's dive into the next code example. Here's what it does:
 - reports request time and request exceptions to Telegraf
 
 Here are execution time results on dashboard:
-![Async requests execution time](tutorial-images/example-1-request-time-results.png)
+![Async requests execution time](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-1-request-time-results.png)
 
 Full code of Example 1 can be found in [example-1-aiohttp-send-stats-basic.py](https://github.com/CheViana/network-calls-stats/blob/master/example-1-aiohttp-send-stats-basic.py).
 
@@ -263,7 +263,7 @@ graph TD;
 Total execution time is approximately the sum of both requests execution time. For positive integers, it's always true that `A + B > MAX(A, B)`. Hence, asyncronous execution takes less time than syncronous one, provided unlimited CPU was available in both cases.
 
 On the panel that shows requests execition time and their total execution time, it's possible to notice that total execution time `call_python_and_mozilla_using_aiohttp_exec_time` almost matches the longer-executing request time:
-![Async requests execution time and total time of both requests](tutorial-images/example-1-requests-and-total-time.png)
+![Async requests execution time and total time of both requests](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-1-requests-and-total-time.png)
 
 The total execution time for both requests is 75-100 msec.
 
@@ -342,7 +342,7 @@ To call async function in sync execution context, special tooling is used, which
 
 ### Compare results for Example 0 and 1
 
-![Compare example 0 and 1](tutorial-images/example-0-1-compare-results.png)
+![Compare example 0 and 1](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-0-1-compare-results.png)
 Connection is not reused for both cases here. Execution time for async version is lower, as expected.
 
 
@@ -387,7 +387,7 @@ class Profiler(TraceConfig):
 I won't bore you with code for each function like `on_dns_resolvehost_end`, it's quite similar to `on_request_end`. Full code of Example 2 is [here](https://github.com/CheViana/network-calls-stats/blob/master/example-2-aiohttp-send-more-stats.py).
 
 Reported stats on dashboard for example 2:
-![aiohttp reporting more stats](tutorial-images/example-2-results.png)
+![aiohttp reporting more stats](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-2-results.png)
 
 We can see that DNS resolution takes couple of milliseconds and happens for every call, and the connection establishing takes 30-40 msec and happens for every call. Also, that DNS cache is not hit, DNS is resolved for every call.
 
@@ -406,7 +406,7 @@ async def main_async():
 ```
 
 And check out how stats look now:
-![aiohttp reuse session timings](tutorial-images/example-3-results.png)
+![aiohttp reuse session timings](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/example-3-results.png)
 
 There's only one dot for connection establishing, and one per DNS resoltion per domain. There's plenty of dots for connection reuse event.
 Total execution time is below 50 msec. Cool.
@@ -426,7 +426,7 @@ Total time for both requests (very approximate):
 
 ## Histogram of request time
 
-![Histogram and heatmap](tutorial-images/bonus-hist-and-heatmap.png)
+![Histogram and heatmap](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-hist-and-heatmap.png)
 
 Grafana panel can not only plot line graphs, but also:
 - show last reading of metric
@@ -437,8 +437,8 @@ Grafana panel can not only plot line graphs, but also:
 Heatmap is helpful for quickly getting understanding what is distribution of backend response time: it can be the case that most requests complete in under 50 msec, but some requests are slow and complete in >500 msec. Average request time doesn't show this information. In previous examples, we're plotting just the average.
 
 We can easily add a heatmat for request execution time:
-![Create heatmap](tutorial-images/bonus-configure-heatmap-1.png)
-![Set Y axis to msec](tutorial-images/bonus-configure-heatmap-2.png)
+![Create heatmap](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-configure-heatmap-1.png)
+![Set Y axis to msec](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-configure-heatmap-2.png)
 
 Need to add new panel, pick measurement details, and select "Heatmap" in "Visualization" collapsible in the right column.
 Every 10 seconds, a new set of bricks appears on the panel. Brick color represents how much measurements fall into that bucket (e.g. 5 fall in the 10 msec - 20 msec range, hence that brick is pink). Set a fixed bucket size or fix the number of buckets, or let default values do their magic.
@@ -459,15 +459,15 @@ It is possible to configure [histogram aggregate](https://github.com/influxdata/
     fields = ["value"]
 ```
 I set `reset=true` and `cumulative=false` which will cause buckets values to be calculated anew for each 30 second period. Need to set value ranges (`buckets`) manually, as well as specify correct `measurement_name`. If `fields` is not specified, histogram buckets are computed for all fields of measurement. Here's how bucket values appear in InfluxDB:
-![InfluxDB raw data for buckets](tutorial-images/bonus-buckets-in-influxdb.png)
+![InfluxDB raw data for buckets](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-buckets-in-influxdb.png)
 
 The amount of request execution times that falls in a bucket is saved under "value_bucket" field name, "gt" ("greater than") and "le" ("less than or equals to") are bucket edge values that appear as tags.
 
 Let's plot these values using "Bar gauge" panel visualization type:
-![Configure histogram](tutorial-images/bonus-configure-hist-1.png)
-![Configure histogram: calculate last](tutorial-images/bonus-configure-hist-2.png)
+![Configure histogram](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-configure-hist-1.png)
+![Configure histogram: calculate last](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-configure-hist-2.png)
 
 Let's create 2 separate panels, one for python.org stats and one for mozilla.org (add 'where domain = python.org' in query edit).
 
 Now we can at a glance compare last 30 sec request execution time distribution for python.org and for mozilla.org:
-![Compare python.org and mozilla.org histogram](tutorial-images/bonus-compare-hist.png)
+![Compare python.org and mozilla.org histogram](https://github.com/CheViana/network-calls-stats/blob/master/tutorial-images/bonus-compare-hist.png)
